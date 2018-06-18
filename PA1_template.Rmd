@@ -7,16 +7,29 @@ output:
 
 
 ## Loading and preprocessing the data
-
+```{r echo = TRUE}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip", destfile = "activity.zip")
+data <- read.table(unz("activity.zip", "activity.csv"), header=TRUE, sep = ",", colClasses = c("numeric", "factor", "numeric"))
+```
 
 
 ## What is mean total number of steps taken per day?
-
-
-
+```{r}
+library(dplyr, quietly = TRUE)
+library(ggplot2, quietly = TRUE)
+data_per_day <- data %>% group_by(date) %>% summarize(steps_per_day = sum(steps, na.rm = TRUE))
+ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 10)
+mean_steps <- mean(data_per_day$steps_per_day)
+median_steps <- median(data_per_day$steps_per_day)
+```
 ## What is the average daily activity pattern?
-
-
+```{r}
+avg_steps_per_interval <- data %>% group_by(interval) %>% summarise(mean_steps = mean(steps, na.rm = TRUE))
+ggplot(avg_steps_per_interval, aes(x = interval, y = mean_steps)) +    geom_line() +
+    xlab("5-minute interval") +
+    ylab("Average Number of Steps taken")
+avg_steps_per_interval$interval[which.max(avg_steps_per_interval$mean_steps)]
+```
 
 ## Imputing missing values
 
