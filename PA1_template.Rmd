@@ -18,7 +18,7 @@ data <- read.table(unz("activity.zip", "activity.csv"), header=TRUE, sep = ",", 
 library(dplyr, quietly = TRUE)
 library(ggplot2, quietly = TRUE)
 data_per_day <- data %>% group_by(date) %>% summarize(steps_per_day = sum(steps, na.rm = TRUE))
-ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 10)
+ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 30)
 mean_steps <- mean(data_per_day$steps_per_day)
 median_steps <- median(data_per_day$steps_per_day)
 ```
@@ -32,7 +32,31 @@ avg_steps_per_interval$interval[which.max(avg_steps_per_interval$mean_steps)]
 ```
 
 ## Imputing missing values
+# Counting the number of missing values
+```{R}
+sum(is.na(data$steps))
+```
 
+# Imputing Missing values
+```{r}
+imputed_data <- data
+missing_rows <- is.na(imputed_data$steps)
+avg_steps_per_day <- with(imputed_data, tapply(steps, interval, mean, na.rm = TRUE))
+imputed_data$steps[missing_rows] <- avg_steps_per_day[as.character(imputed_data$interval[missing_rows])]
 
+imputed_data_per_day <- imputed_data %>% group_by(date) %>% summarize(steps_per_day = sum(steps))
+par(mfrow = c(1,2))
+ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 20) + geom_vline(xintercept = mean(data_per_day$steps_per_day), size = 1.5, alpha = 0.5, col = "cyan")
+ggplot(imputed_data_per_day, aes(steps_per_day)) + geom_histogram(bins = 20) + geom_vline(xintercept = mean(imputed_data_per_day$steps_per_day), size = 1.5, alpha = 0.5, col = "red")
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+library(lubridate, quietly = TRUE)
+imputed_data$date <- ymd(imputed_data$date)
+imputed_data <- imputed_data %>% mutate(Day = ifelse(weekdays(date) %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+
+imputed_data %>% group_by(interval,Day) %>% summarise(mean_steps = mean(steps, na.rm = TRUE)) %>% ggplot(aes(x = interval, y = mean_steps, col = Day)) +    geom_line() + facet_grid(Day~.) +
+    ylab("5-minute interval") +
+    xlab("Average Number of Steps taken")
+```
