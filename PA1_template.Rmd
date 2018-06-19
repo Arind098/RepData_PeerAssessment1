@@ -1,6 +1,6 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
+output:
   html_document:
     keep_md: true
 ---
@@ -9,7 +9,7 @@ The following document is an assessment on the personal activity through the hel
 
 ## Loading and preprocessing the data
 
-Loading the data from a zip file 
+Loading the data from a zip file
 ```{r echo = TRUE}
 download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip", destfile = "activity.zip")
 data <- read.table(unz("activity.zip", "activity.csv"), header=TRUE, sep = ",", colClasses = c("numeric", "factor", "numeric"))
@@ -26,7 +26,9 @@ For this part of the assignment, you can ignore the missing values in the datase
 library(dplyr, quietly = TRUE)
 library(ggplot2, quietly = TRUE)
 data_per_day <- data %>% group_by(date) %>% summarize(steps_per_day = sum(steps, na.rm = TRUE))
-ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 30)
+hist1 <- ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 20) + geom_vline(xintercept = mean(data_per_day$steps_per_day), size = 1.5, alpha = 0.5, col = "cyan") + xlab("Total Number of Steps Taken Each Day") +
+    ylab("Count")
+print(hist1)
 ```
 
 * Mean of the Total number of steps taken per day `r round(mean(data_per_day$steps_per_day), 3)`
@@ -39,9 +41,10 @@ ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 30)
 
 ```{r}
 avg_steps_per_interval <- data %>% group_by(interval) %>% summarise(mean_steps = mean(steps, na.rm = TRUE))
-ggplot(avg_steps_per_interval, aes(x = interval, y = mean_steps)) +    geom_line() +
-    xlab("5-minute interval") +
-    ylab("Average Number of Steps taken")
+ggplot(avg_steps_per_interval, aes(x = interval, y = mean_steps)) + geom_line() +
+   xlab("Time Intervals (5 Minutes)") +
+    ylab("Total Number of Steps") +
+    ggtitle("Average Number of Steps")
 avg_steps_per_interval$interval[which.max(avg_steps_per_interval$mean_steps)]
 ```
 
@@ -52,6 +55,9 @@ sum(is.na(data$steps))
 ```
 
 ### Imputing Missing values and create a new dataset
+
+Note missing values is replaced with the mean number of steps for each interval across all of the days
+
 ```{r echo = TRUE}
 imputed_data <- data
 missing_rows <- is.na(imputed_data$steps)
@@ -63,22 +69,30 @@ head(imputed_data)
 ### Plotting the difference between original data and the imputed data
 
 ```{r echo = TRUE}
+library(grid)
+library(gridExtra)
 imputed_data_per_day <- imputed_data %>% group_by(date) %>% summarize(steps_per_day = sum(steps))
-par(mfrow = c(1,2))
-ggplot(data_per_day, aes(steps_per_day)) + geom_histogram(bins = 20) + geom_vline(xintercept = mean(data_per_day$steps_per_day), size = 1.5, alpha = 0.5, col = "cyan")
-ggplot(imputed_data_per_day, aes(steps_per_day)) + geom_histogram(bins = 20) + geom_vline(xintercept = mean(imputed_data_per_day$steps_per_day), size = 1.5, alpha = 0.5, col = "red")
+
+hist2 <- ggplot(imputed_data_per_day, aes(steps_per_day)) + geom_histogram(bins = 20) + geom_vline(xintercept = mean(imputed_data_per_day$steps_per_day), size = 1.5, alpha = 0.5, col = "red") + xlab("Total no. of Steps Taken (Imputed Dataset)") +
+    ylab("Count")
+grid.arrange(hist1, hist2, ncol = 2)
 ```
+
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
 1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
 
-2. Make a panel plot containing a time series plot (type="l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
 ```{r}
 library(lubridate, quietly = TRUE)
 imputed_data$date <- ymd(imputed_data$date)
 imputed_data <- imputed_data %>% mutate(Day = ifelse(weekdays(date) %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+head(imputed_data)
+```
 
+2. Make a panel plot containing a time series plot (type="l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+```{r}
 imputed_data %>% group_by(interval,Day) %>% summarise(mean_steps = mean(steps, na.rm = TRUE)) %>% ggplot(aes(x = interval, y = mean_steps, col = Day)) +    geom_line() + facet_grid(Day~.) +
     ylab("5-minute interval") +
     xlab("Average Number of Steps taken")
